@@ -6,7 +6,8 @@ const Task = sequelize.define('Task', {
   title: { type: DataTypes.STRING, allowNull: false },
   description: { type: DataTypes.TEXT },
   due_date: { type: DataTypes.DATE },
-  priority: { type: DataTypes.ENUM('High', 'Medium', 'Low') }
+  priority: { type: DataTypes.ENUM('High', 'Medium', 'Low') },
+  status: { type: DataTypes.ENUM('Todo', 'In Progress', 'Completed'), defaultValue: 'Todo' },
 }, { timestamps: true });
 
 Task.belongsTo(User, { as: 'assigned_to', foreignKey: 'assigned_to_id' });
