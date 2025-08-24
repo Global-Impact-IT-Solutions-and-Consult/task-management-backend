@@ -9,7 +9,9 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = await User.findByPk(decoded.id, { include: Role });
+      req.user = await User.findByPk(decoded.id, { include: {model: Role, as:'role'} });
+      console.log("User from token:", req.user);
+      console.log("User Role:", req.user.role.name);
 
       if (!req.user) {
         return res.status(401).json({ message: "User not found" });
@@ -28,7 +30,7 @@ const protect = async (req, res, next) => {
 
 const checkRole = (roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.Role.name)) {
+    if (!roles.includes(req.user.role.name)) {
       return res.status(403).json({ message: "Forbidden: Insufficient role" });
     }
     next();

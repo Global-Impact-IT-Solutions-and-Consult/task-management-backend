@@ -8,6 +8,6 @@ const User = sequelize.define('User', {
   password: { type: DataTypes.STRING, allowNull: false }
 }, { timestamps: true });
 
-User.belongsTo(Role, { foreignKey: 'role_id' });
+User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
 
 module.exports = User;
