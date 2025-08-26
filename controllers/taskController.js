@@ -4,7 +4,7 @@ const Role = require("../models/Role");
 
 // Create Task
 const createTask = async (req, res) => {
-  const { title, description, due_date, priority, assigned_to_id, role_nature_id } = req.body;
+  const { title, description, start_date, due_date, priority, assigned_to_id, role_nature_id } = req.body;
 
   try {
     const assignedUser = await User.findByPk(assigned_to_id);
@@ -19,6 +19,7 @@ const createTask = async (req, res) => {
     const task = await Task.create({
       title,
       description,
+      start_date,
       due_date,
       priority,
       assigned_to_id,
@@ -97,7 +98,7 @@ const updateTask = async (req, res) => {
     }
 
     // update allowed fields
-    const fields = ['title', 'description', 'due_date', 'priority', 'assigned_to_id', 'status', 'percentage_completed'];
+    const fields = ['title', 'description', 'start_date', 'due_date', 'priority', 'assigned_to_id', 'status', 'percentage_completed'];
     if (req.body.status == 'Todo'){
       req.body.percentage_completed = 0;
     }
