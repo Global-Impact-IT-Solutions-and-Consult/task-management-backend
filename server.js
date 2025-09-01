@@ -59,6 +59,7 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 // ==== ROUTES ====
+app.get('/', (req, res) => { res.send('API is running...'); });
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/tasks", require("./routes/taskRoutes"));
