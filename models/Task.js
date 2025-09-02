@@ -9,7 +9,7 @@ const Task = sequelize.define('Task', {
   due_date: { type: DataTypes.DATE },
   priority: { type: DataTypes.ENUM('High', 'Medium', 'Low') },
   status: { type: DataTypes.ENUM('Todo', 'In Progress', 'Done'), defaultValue: 'Todo' },
-  percentage_completed: { type: DataTypes.NUMBER, defaultValue: 0 },
+  percentage_completed: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { timestamps: true });
 
 Task.belongsTo(User, { as: 'assigned_to', foreignKey: 'assigned_to_id' });
