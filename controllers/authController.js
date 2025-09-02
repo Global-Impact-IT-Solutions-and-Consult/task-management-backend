@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Role = require("../models/Role");
+const { notifyRoles, notifyUser } = require('../services/notificationService');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -24,6 +25,18 @@ const registerUser = async (req, res) => {
       password: hashedPassword,
       role_id
     });
+
+    // after creating the new user "user"
+    const io = req.app.get('io');
+    await notifyRoles(io, ['Admin', 'Manager'], {
+      title: 'New user registered',
+      body: `${user.name} (${user.email}) registered`,
+      type: 'user',
+      action: 'registered',
+      entity_type: 'user',
+      entity_id: user.id,
+      meta: { email: user.email }
+    }, { actorId: req.user?.id }); // if public register, req.user may be undefined
 
     return res.status(201).json({
       id: user.id,
@@ -98,6 +111,8 @@ const updateUser = async (req, res) => {
     const userToBeUpdated = await User.findByPk(req.params.id);
     if (!userToBeUpdated) return res.status(404).json({ message: 'User not found' });
 
+    const prevRoleId = userToBeUpdated.role_id;
+    const prevRole = prevRoleId ? await Role.findByPk(prevRoleId) : null;
 
     // save req.body since it is not a complete user object
     userToBeUpdated.name = name || userToBeUpdated.name;
@@ -106,6 +121,45 @@ const updateUser = async (req, res) => {
 
     await userToBeUpdated.save();
     const savedUser = await User.findByPk( userToBeUpdated.id ,{include: [{ model: Role, as: 'role' }] })
+
+    const io = req.app.get('io');
+    await notifyRoles(io, ['Admin', 'Manager'], {
+      title: 'User details updated',
+      body: `${userToBeUpdated.name} updated by ${req.user.name}`,
+      type: 'user',
+      action: 'details_updated',
+      entity_type: 'user',
+      entity_id: userToBeUpdated.id
+    }, { actorId: req.user.id });
+
+    if (req.user.id !== userToBeUpdated.id) {
+      // check if role changed
+      const newRoleId = userToBeUpdated.role_id;
+      const newRole = newRoleId ? await Role.findByPk(newRoleId) : null;
+      const roleChanged = Number(prevRoleId) != Number(newRoleId);
+
+      // build a friendly message
+      const body = roleChanged
+        ? `Your role was changed from "${prevRole?.name ?? 'None'}" to "${newRole?.name ?? 'None'}" by ${req.user.name}.`
+        : `Your profile was updated by ${req.user.name}.`;
+
+      const meta = {
+        updatedBy: { id: req.user.id, name: req.user.name },
+        fieldChanges: {
+          role: roleChanged ? { from: prevRole?.name ?? null, to: newRole?.name ?? null } : undefined
+        }
+      };
+
+      await notifyUser(io, userToBeUpdated.id, {
+        title: roleChanged ? 'Your role was updated' : 'Your profile was updated',
+        body,
+        type: 'user',
+        action: 'details_updated',     // keep enum consistent
+        entity_type: 'user',
+        entity_id: userToBeUpdated.id,
+        meta
+      }, { actorId: req.user.id });
+    }
 
     res.status(200).json({ message: 'User updated successfully', user:savedUser });
   } catch (error) {
@@ -127,6 +181,18 @@ const updateMe = async (req, res) => {
     user.roleId = roleId || user.roleId;
 
     await user.save();
+
+    // after current user is saved
+    const io = req.app.get('io');
+    await notifyRoles(io, ['Admin', 'Manager'], {
+      title: 'User details updated',
+      body: `${req.user.name} updated their profile`,
+      type: 'user',
+      action: 'details_updated',
+      entity_type: 'user',
+      entity_id: req.user.id
+    }, { actorId: req.user.id });
+
 
     const savedUser = await User.findOne({ where: { email }, include: [{ model: Role, as: 'role' }] })
 

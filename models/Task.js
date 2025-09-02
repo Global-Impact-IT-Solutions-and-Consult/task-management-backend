@@ -6,6 +6,7 @@ const Role = require('./Role');
 const Task = sequelize.define('Task', {
   title: { type: DataTypes.STRING, allowNull: false },
   description: { type: DataTypes.TEXT },
+  start_date: { type: DataTypes.DATE },
   due_date: { type: DataTypes.DATE },
   priority: { type: DataTypes.ENUM('High', 'Medium', 'Low') },
   status: { type: DataTypes.ENUM('Todo', 'In Progress', 'Done'), defaultValue: 'Todo' },

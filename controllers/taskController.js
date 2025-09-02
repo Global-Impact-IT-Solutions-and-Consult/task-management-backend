@@ -1,10 +1,11 @@
 const Task = require("../models/Task");
 const User = require("../models/User");
 const Role = require("../models/Role");
+const { notifyRoles, notifyUser } = require('../services/notificationService');
 
 // Create Task
 const createTask = async (req, res) => {
-  const { title, description, due_date, priority, assigned_to_id, role_nature_id } = req.body;
+  const { title, description, start_date, due_date, priority, assigned_to_id, role_nature_id } = req.body;
 
   try {
     const assignedUser = await User.findByPk(assigned_to_id);
@@ -19,6 +20,7 @@ const createTask = async (req, res) => {
     const task = await Task.create({
       title,
       description,
+      start_date,
       due_date,
       priority,
       assigned_to_id,
@@ -26,6 +28,30 @@ const createTask = async (req, res) => {
       percentage_completed: 0, // Default percentage
       role_nature_id
     });
+
+    const io = req.app.get('io');
+
+    await notifyRoles(io, ['Admin', 'Manager'], {
+      title: 'Task created',
+      body: `${req.user.name} created task "${task.title}"`,
+      type: 'task',
+      action: 'created',
+      entity_type: 'task',
+      entity_id: task.id
+    }, { actorId: req.user.id });
+
+    if (task.assigned_to_id) {
+      await notifyUser(io, task.assigned_to_id, {
+        title: 'You were assigned a task',
+        body: `Task "${task.title}" was assigned to you`,
+        type: 'task',
+        action: 'created',
+        entity_type: 'task',
+        entity_id: task.id
+      }, { actorId: req.user.id });
+    }
+
+
 
     return res.status(201).json(task);
   } catch (error) {
@@ -97,7 +123,7 @@ const updateTask = async (req, res) => {
     }
 
     // update allowed fields
-    const fields = ['title', 'description', 'due_date', 'priority', 'assigned_to_id', 'status', 'percentage_completed'];
+    const fields = ['title', 'description', 'start_date', 'due_date', 'priority', 'assigned_to_id', 'status', 'percentage_completed'];
     if (req.body.status == 'Todo'){
       req.body.percentage_completed = 0;
     }
@@ -117,6 +143,29 @@ const updateTask = async (req, res) => {
       ]
     });
 
+    const io = req.app.get('io');
+
+    await notifyRoles(io, ['Admin', 'Manager'], {
+      title: 'Task updated',
+      body: `${req.user.name} updated task "${task.title}"`,
+      type: 'task',
+      action: 'updated',
+      entity_type: 'task',
+      entity_id: task.id
+    }, { actorId: req.user.id });
+
+    if (task.assigned_to_id) {
+      await notifyUser(io, task.assigned_to_id, {
+        title: 'Task updated',
+        body: `Your task "${task.title}" was updated`,
+        type: 'task',
+        action: 'updated',
+        entity_type: 'task',
+        entity_id: task.id
+      }, { actorId: req.user.id });
+    }
+
+
     return res.json(updated);
   } catch (error) {
     console.error(error);
@@ -131,6 +180,30 @@ const deleteTask = async (req, res) => {
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     await task.destroy();
+    
+    const io = req.app.get('io');
+
+    await notifyRoles(io, ['Admin', 'Manager'], {
+      title: 'Task deleted',
+      body: `${req.user.name} deleted task "${task.title}"`,
+      type: 'task',
+      action: 'deleted',
+      entity_type: 'task',
+      entity_id: task.id
+    }, { actorId: req.user.id });
+
+    if (task.assigned_to_id) {
+      await notifyUser(io, task.assigned_to_id, {
+        title: 'Task deleted',
+        body: `Your task "${task.title}" was deleted`,
+        type: 'task',
+        action: 'deleted',
+        entity_type: 'task',
+        entity_id: task.id
+      }, { actorId: req.user.id });
+    }
+
+
     return res.json({ message: "Task deleted" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
