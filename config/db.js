@@ -2,13 +2,22 @@ const { Sequelize } = require("sequelize");
 
 // Database configuration with fallback values
 const dbConfig = {
-  database: process.env.DB_NAME || "task_management",
-  username: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "postgres",
-  host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 5432,
-  dialect: process.env.DB_DIALECT || "postgres",
+  database: process.env.DB_NAME,
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  dialect: process.env.DB_DIALECT,
   logging: process.env.NODE_ENV === "development" ? console.log : false,
+  dialectOptions: {
+    ssl:
+      process.env.POSTGRES_CERT === "true"
+        ? {
+            require: true,
+            rejectUnauthorized: false,
+          }
+        : false,
+  },
   pool: {
     max: 5,
     min: 0,
@@ -52,7 +61,7 @@ const connectWithRetry = async () => {
       error.message.includes("ETIMEDOUT") ||
       error.message.includes("ECONNREFUSED")
     ) {
-      console.log("🔄 Connection timeout/refused. Please check:");
+      console.log(" Connection timeout/refused. Please check:");
       console.log("   1. Is your database server running?");
       console.log("   2. Are the connection details correct?");
       console.log("   3. Is the database accessible from this network?");
